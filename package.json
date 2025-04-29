@@ -1,15 +1,23 @@
 {
-  "name": "xx",
+  "name": "x",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.mjs",
   "scripts": {
-    "start": "node app.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon app.mjs"
   },
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
   "dependencies": {
-    "express-validator": "^7.2.1"
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2"
   }
 }

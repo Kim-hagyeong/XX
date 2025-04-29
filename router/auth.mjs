@@ -5,6 +5,8 @@ import { validate } from "../middleware/validator.mjs";
 
 const router = express.Router();
 
+const validateSignup = [];
+
 const validateLogin = [
   body("userid")
     .trim()
