@@ -6,7 +6,7 @@ export async function getPosts(req, res, next) {
   const data = await (userid
     ? postRepository.getAllByUserid(userid)
     : postRepository.getAll());
-  res.status(200).json(data);
+  res.status(200).json({ posts: data });
 }
 
 // id를 받아 하나의 포스트를 가져오는 함수

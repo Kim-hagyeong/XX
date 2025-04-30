@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>포스트 목록</title>
+  </head>
+  <body>
+    <h2>포스트 목록</h2>
+    <ul id="post-list"></ul>
+
+    <script>
+      async function fetchPosts() {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          alert("로그인이 필요합니다.");
+          window.location.href = "login.html";
+          return;
+        }
+
+        try {
+          const res = await fetch("http://127.0.0.1:8080/posts", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const result = await res.json();
+
+          if (res.ok) {
+            const postList = document.getElementById("post-list");
+            result.posts.forEach((post) => {
+              const li = document.createElement("li");
+              // ✅ 서버 응답에 맞게 수정
+              li.innerHTML = `<h3>${post.name}님의 글</h3><p>${post.text}</p>`;
+              postList.appendChild(li);
+            });
+          } else {
+            alert(`포스트 불러오기 실패: ${result.message}`);
+            if (res.status === 401) {
+              window.location.href = "login.html";
+            }
+          }
+        } catch (err) {
+          console.error("에러 발생:", err);
+          alert("포스트 불러오는 중 에러가 발생했습니다.");
+        }
+      }
+
+      fetchPosts();
+    </script>
+  </body>
+</html>
