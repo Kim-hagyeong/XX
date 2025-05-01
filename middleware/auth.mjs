@@ -13,35 +13,19 @@
  */
 
 import jwt from "jsonwebtoken";
-import * as authRepository from "../data/auth.mjs";
+const JWT_SECRET = "your_jwt_secret";
 
-const AUTH_ERROR = { message: "인증에러" };
-
-export const isAuth = async (req, res, next) => {
-  const authHeader = req.get("Authorization");
-  console.log(authHeader);
-
-  if (!(authHeader && authHeader.startsWith("Bearer "))) {
-    console.log("헤더 에러");
-    return res.status(401).json(AUTH_ERROR);
+export function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "토큰이 필요합니다" });
   }
   const token = authHeader.split(" ")[1];
-  console.log(token);
-
-  jwt.verify(token, "abcdefg1234%^&*", async (error, decoded) => {
-    if (error) {
-      console.log("토큰 에러");
-      return res.status(401).json(AUTH_ERROR);
-    }
-    console.log(decoded.id);
-    const user = await authRepository.findByid(decoded.id);
-    if (!user) {
-      console.log("아이디 없음");
-      return res.status(401).json(AUTH_ERROR);
-    }
-    console.log("user.id: ", user.id);
-    console.log("user.userid: ", user.userid);
-    req.userid = user.userid;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
     next();
-  });
-};
+  } catch (err) {
+    return res.status(401).json({ message: "유효하지 않은 토큰입니다" });
+  }
+}

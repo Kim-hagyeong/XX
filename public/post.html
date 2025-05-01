@@ -6,49 +6,155 @@
   </head>
   <body>
     <h2>포스트 목록</h2>
+
+    <!-- 🔸 글 작성 폼 -->
+    <form id="post-form">
+      <input type="hidden" id="userid" />
+      <input type="hidden" id="name" />
+      <textarea id="text" placeholder="내용을 입력하세요" required></textarea>
+      <button type="submit">글 등록</button>
+    </form>
+
+    <hr />
+
+    <!-- 🔸 글 목록 -->
     <ul id="post-list"></ul>
 
     <script>
-      async function fetchPosts() {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-          alert("로그인이 필요합니다.");
-          window.location.href = "login.html";
-          return;
-        }
-
+      // 🔐 JWT 디코드 (Base64 URL 디코딩)
+      function parseJwt(token) {
         try {
-          const res = await fetch("http://127.0.0.1:8080/posts", {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const result = await res.json();
-
-          if (res.ok) {
-            const postList = document.getElementById("post-list");
-            result.posts.forEach((post) => {
-              const li = document.createElement("li");
-              // ✅ 서버 응답에 맞게 수정
-              li.innerHTML = `<h3>${post.name}님의 글</h3><p>${post.text}</p>`;
-              postList.appendChild(li);
-            });
-          } else {
-            alert(`포스트 불러오기 실패: ${result.message}`);
-            if (res.status === 401) {
-              window.location.href = "login.html";
-            }
-          }
-        } catch (err) {
-          console.error("에러 발생:", err);
-          alert("포스트 불러오는 중 에러가 발생했습니다.");
+          const payload = token.split(".")[1];
+          return JSON.parse(
+            atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+          );
+        } catch (e) {
+          return null;
         }
       }
 
-      fetchPosts();
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("로그인이 필요합니다.");
+        window.location.href = "login.html";
+      }
+
+      const user = parseJwt(token);
+      if (!user) {
+        alert("유효하지 않은 토큰입니다. 다시 로그인 해주세요.");
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+
+      // 🔸 사용자 정보 자동 채우기
+      document.getElementById("userid").value = user.userid;
+      document.getElementById("name").value = user.name;
+
+      // 🔸 글 불러오기
+      async function loadPosts() {
+        const res = await fetch("http://127.0.0.1:8080/posts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await res.json();
+
+        const postList = document.getElementById("post-list");
+        postList.innerHTML = "";
+
+        result.posts.forEach((post) => {
+          const li = document.createElement("li");
+
+          const isMine = post.userid === user.userid;
+
+          li.innerHTML = `
+          <strong>${post.name}</strong>: 
+          <span>${post.text}</span>
+          ${
+            isMine
+              ? `
+            <button onclick="editPost(${post.id}, this)">✏️ 수정</button>
+            <button onclick="deletePost(${post.id})">🗑 삭제</button>
+          `
+              : ""
+          }
+        `;
+
+          postList.appendChild(li);
+        });
+      }
+
+      // 🔸 글 등록
+      document
+        .getElementById("post-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const text = document.getElementById("text").value;
+
+          const data = {
+            userid: user.userid,
+            name: user.name,
+            text,
+          };
+
+          const res = await fetch("http://127.0.0.1:8080/posts", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (res.ok) {
+            document.getElementById("text").value = "";
+            loadPosts(); // 갱신
+          } else {
+            alert("등록 실패");
+          }
+        });
+
+      // 🔸 글 수정
+      async function editPost(id, button) {
+        const li = button.closest("li");
+        const span = li.querySelector("span");
+        const oldText = span.innerText;
+
+        const newText = prompt("수정할 내용을 입력하세요:", oldText);
+        if (!newText) return;
+
+        const res = await fetch(`http://127.0.0.1:8080/posts/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newText }),
+        });
+
+        if (res.ok) {
+          loadPosts();
+        } else {
+          alert("수정 실패");
+        }
+      }
+
+      // 🔸 글 삭제
+      async function deletePost(id) {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+
+        const res = await fetch(`http://127.0.0.1:8080/posts/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          loadPosts();
+        } else {
+          alert("삭제 실패");
+        }
+      }
+
+      // 최초 호출
+      loadPosts();
     </script>
   </body>
 </html>
